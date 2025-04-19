@@ -1,31 +1,55 @@
-FROM ubuntu:22.04
+# Imagem base
+FROM ubuntu:24.04
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV SDKMAN_DIR="/root/.sdkman"
-ENV PATH="${SDKMAN_DIR}/candidates/java/current/bin:${PATH}"
+# Variáveis de ambiente
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    SDKMAN_DIR=/opt/sdkman \
+    PATH=/opt/sdkman/candidates/java/current/bin:$PATH
 
-# Instala dependências
-RUN apt-get update && apt-get install -y \
-    curl zip unzip git bash ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# Instala dependências essenciais e utilitários
+RUN apt update -y && apt install -y \
+    curl \
+    lsof \
+    ca-certificates \
+    openssl \
+    git \
+    tar \
+    sqlite3 \
+    fontconfig \
+    tzdata \
+    iproute2 \
+    libfreetype6 \
+    tini \
+    zip \
+    unzip \
+    bash
 
-# Instala o SDKMAN
-RUN curl -s "https://get.sdkman.io" | bash
+# Instala SDKMAN e Java fora do /home/container
+RUN curl -s "https://get.sdkman.io" | bash && \
+    bash -c "source ${SDKMAN_DIR}/bin/sdkman-init.sh && \
+             sdk install java 21.0.2-tem && \
+             sdk default java 21.0.2-tem"
 
-# Instala múltiplas versões do Java
-RUN bash -c "source ${SDKMAN_DIR}/bin/sdkman-init.sh && \
-    sdk install java 8.0.382-tem && \
-    sdk install java 11.0.20-tem && \
-    sdk install java 16.0.2-tem && \
-    sdk install java 17.0.8-tem && \
-    sdk install java 21.0.2-tem && \
-    sdk default java 21.0.2-tem"
+# Cria o usuário do container
+RUN useradd -m -d /home/container -s /bin/bash container
 
-# Garante que o sdkman esteja sempre disponível ao entrar no contêiner
-RUN echo 'source "$SDKMAN_DIR/bin/sdkman-init.sh"' >> /root/.bashrc
+# Seta permissões adequadas
+RUN chown -R container:container /opt/sdkman
 
-# Diretório de trabalho
-WORKDIR /app
+# Define variáveis de ambiente para o usuário container
+ENV HOME=/home/container USER=container
 
-# Entrada padrão
-CMD ["bash"]
+# Entrypoint e sinal de parada
+STOPSIGNAL SIGINT
+
+# Copia o entrypoint
+COPY --chown=container:container ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Muda para o usuário não-root
+USER container
+WORKDIR /home/container
+
+ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
+CMD ["/entrypoint.sh"]
