@@ -23,11 +23,15 @@ RUN apt update -y && apt install -y \
     tini \
     zip \
     unzip \
-    bash
+    bash \
+	jq
 
 # Instala SDKMAN e Java fora do /home/container
 RUN curl -s "https://get.sdkman.io" | bash && \
     bash -c "source ${SDKMAN_DIR}/bin/sdkman-init.sh && \
+	         sdk install java 8.0.382-tem && \
+  			 sdk install java 11.0.20-tem && \
+			 sdk install java 16.0.2-tem && \			 
              sdk install java 21.0.2-tem && \
              sdk default java 21.0.2-tem"
 
