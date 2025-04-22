@@ -12,25 +12,37 @@ source "$SDKMAN_DIR/bin/sdkman-init.sh"
 INTERNAL_IP=$(ip route get 1 | awk '{print $(NF-2);exit}')
 export INTERNAL_IP
 
-# Seleção do Java com base na versão do Minecraft
-echo "Selecionando Java para versão ${MINECRAFT_VERSION}"
+# Define as versões de Java que podem ser usadas
+ALL_JAVA_VERSIONS=("8.0.382-tem" "11.0.20-tem" "16.0.2-tem" "21.0.2-tem")
+
+# Determina qual versão usar com base na variável MINECRAFT_VERSION
 case ${MINECRAFT_VERSION} in
     1.8*|1.9*|1.10*|1.11*)
-        sdk use java 8.0.382-tem
+        JAVA_TO_USE="8.0.382-tem"
         ;;
     1.12*|1.13*|1.14*|1.15*|1.16.0|1.16.1|1.16.2|1.16.3|1.16.4)
-        sdk use java 11.0.20-tem
+        JAVA_TO_USE="11.0.20-tem"
         ;;
     1.16.5)
-        sdk use java 16.0.2-tem
+        JAVA_TO_USE="16.0.2-tem"
         ;;
     1.17.1|1.18*|1.19*|1.20*|1.21*)
-        sdk use java 21.0.2-tem
+        JAVA_TO_USE="21.0.2-tem"
         ;;
     *)
-        sdk use java 21.0.2-tem
+        JAVA_TO_USE="21.0.2-tem"
         ;;
 esac
+
+# Usa a versão selecionada
+sdk use java "$JAVA_TO_USE"
+
+# Desinstala as versões que não são necessárias
+for VERSION in "${ALL_JAVA_VERSIONS[@]}"; do
+    if [ "$VERSION" != "$JAVA_TO_USE" ]; then
+        sdk uninstall java "$VERSION"
+    fi
+done
 
 # Switch to the container's working directory
 cd /home/container || exit 1
